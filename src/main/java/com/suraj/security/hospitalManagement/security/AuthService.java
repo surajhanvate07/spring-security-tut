@@ -2,9 +2,13 @@ package com.suraj.security.hospitalManagement.security;
 
 import com.suraj.security.hospitalManagement.dto.LoginRequestDto;
 import com.suraj.security.hospitalManagement.dto.LoginResponseDto;
+import com.suraj.security.hospitalManagement.dto.SignUpRequestDto;
 import com.suraj.security.hospitalManagement.dto.SignUpResponseDto;
+import com.suraj.security.hospitalManagement.entity.Patient;
 import com.suraj.security.hospitalManagement.entity.User;
 import com.suraj.security.hospitalManagement.entity.type.AuthProviderType;
+import com.suraj.security.hospitalManagement.entity.type.RoleType;
+import com.suraj.security.hospitalManagement.repository.PatientRepository;
 import com.suraj.security.hospitalManagement.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,6 +20,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +35,8 @@ public class AuthService {
 
     private final PasswordEncoder passwordEncoder;
 
+    private final PatientRepository patientRepository;
+
     public LoginResponseDto login(LoginRequestDto loginRequestDto) {
 
         Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequestDto.getUsername(), loginRequestDto.getPassword()));
@@ -40,7 +48,7 @@ public class AuthService {
         return new LoginResponseDto(token, user.getId());
     }
 
-    public User userSignUp(LoginRequestDto signUpRequestDto, AuthProviderType providerType, String providerId) {
+    public User userSignUp(SignUpRequestDto signUpRequestDto, AuthProviderType providerType, String providerId) {
         User user = userRepository.findByUsername(signUpRequestDto.getUsername()).orElse(null);
         if (user != null) throw new IllegalArgumentException("Username already exists");
 
@@ -48,6 +56,7 @@ public class AuthService {
                 .username(signUpRequestDto.getUsername())
                 .providerType(providerType)
                 .providerId(providerId)
+                .roles(signUpRequestDto.getRoles())
                 .build();
 
         if (providerType == AuthProviderType.EMAIL) {
@@ -55,10 +64,21 @@ public class AuthService {
         } else {
             newUser.setPassword("");
         }
-        return userRepository.save(newUser);
+
+        newUser = userRepository.save(newUser);
+
+        Patient patient = Patient.builder()
+                .name(signUpRequestDto.getName())
+                .email(signUpRequestDto.getUsername())
+                .user(newUser)
+                .build();
+
+        patientRepository.save(patient);
+
+        return newUser;
     }
 
-    public SignUpResponseDto signUp(LoginRequestDto signUpRequestDto) {
+    public SignUpResponseDto signUp(SignUpRequestDto signUpRequestDto) {
         User newUser = userSignUp(signUpRequestDto, AuthProviderType.EMAIL, null);
         return new SignUpResponseDto(newUser.getId(), newUser.getUsername());
     }
@@ -75,12 +95,13 @@ public class AuthService {
         User user = userRepository.findByProviderIdAndProviderType(providerId, providerType).orElse(null);
 
         String email = oAuth2User.getAttribute("email");
+        String name = oAuth2User.getAttribute("name");
 
         User emailUser = userRepository.findByUsername(email).orElse(null);
 
         if (user == null && emailUser == null) {
             String username = authUtil.determineUsernameFromOAuth2User(oAuth2User, registrationId, providerId);
-            user = userSignUp(new LoginRequestDto(username, null), providerType, providerId);
+            user = userSignUp(new SignUpRequestDto(username, null, name, Set.of(RoleType.PATIENT)), providerType, providerId);
         } else if (user != null) {
             if (email != null && !email.isBlank() && !user.getUsername().equals(email)) {
                 user.setUsername(email);

@@ -1,10 +1,10 @@
 package com.suraj.security.hospitalManagement.security;
 
+import com.suraj.security.hospitalManagement.entity.type.RoleType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -24,10 +24,10 @@ public class WebSecurityConfig {
                 .csrf(csrfConfigurer -> csrfConfigurer.disable())
                 .sessionManagement(sessionConfigurer -> sessionConfigurer.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                                .requestMatchers("/public/**", "/auth/**").permitAll()
-//                        .requestMatchers("/admin/**").hasRole("ADMIN")
-//                        .requestMatchers("/doctors/**").hasAnyRole("ADMIN", "DOCTOR")
-                                .anyRequest().authenticated()
+                        .requestMatchers("/public/**", "/auth/**").permitAll()
+                        .requestMatchers("/admin/**").hasRole(RoleType.ADMIN.name())
+                        .requestMatchers("/doctors/**").hasAnyRole(RoleType.ADMIN.name(), RoleType.DOCTOR.name())
+                        .anyRequest().authenticated()
                 )
                 .addFilterAfter(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .oauth2Login(oAuth2 -> oAuth2

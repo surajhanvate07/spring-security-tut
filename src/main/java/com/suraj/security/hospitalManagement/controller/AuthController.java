@@ -2,6 +2,7 @@ package com.suraj.security.hospitalManagement.controller;
 
 import com.suraj.security.hospitalManagement.dto.LoginRequestDto;
 import com.suraj.security.hospitalManagement.dto.LoginResponseDto;
+import com.suraj.security.hospitalManagement.dto.SignUpRequestDto;
 import com.suraj.security.hospitalManagement.dto.SignUpResponseDto;
 import com.suraj.security.hospitalManagement.security.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +27,7 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<SignUpResponseDto> signup (@RequestBody LoginRequestDto signUpRequestDto) {
+    public ResponseEntity<SignUpResponseDto> signup (@RequestBody SignUpRequestDto signUpRequestDto) {
         return new ResponseEntity<>(authService.signUp(signUpRequestDto), HttpStatus.CREATED);
 
     }
